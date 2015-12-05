@@ -1,0 +1,60 @@
+input void UP_KEY_DOWN;
+input void LEFT_KEY_DOWN;
+input void RIGHT_KEY_DOWN;
+input void UP_KEY_UP;
+input void LEFT_KEY_UP;
+input void RIGHT_KEY_UP;
+input void UPDATE;
+
+var int up_down = 0;
+var int left_down = 0;
+var int right_down = 0;
+var int x = 200;
+var int y = 300;
+
+_new_bunny(1, 200, 100);
+_new_bunny(2, 100, 200);
+_new_bunny(3, 300, 200);
+_new_bunny(4, x, y);
+
+par do
+  every UP_KEY_DOWN do
+    up_down = 1;
+  end
+with
+  every LEFT_KEY_DOWN do
+    left_down = 1;
+  end
+with
+  every RIGHT_KEY_DOWN do
+    right_down = 1;
+  end
+with
+  every UP_KEY_UP do
+    up_down = 0;
+  end
+with
+  every LEFT_KEY_UP do
+    left_down = 0;
+  end
+with
+  every RIGHT_KEY_UP do
+    right_down = 0;
+  end
+with
+  every UPDATE do
+    if up_down then
+      _spin_bunny(1);
+      y = y - 1;
+    end
+    if left_down then
+      _spin_bunny(2);
+      x = x - 1;
+    end
+    if right_down then
+      _spin_bunny(3);
+      x = x + 1;
+    end
+    _set_bunny_position(4, x, y);
+  end
+end

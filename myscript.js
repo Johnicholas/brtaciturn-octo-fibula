@@ -1,5 +1,39 @@
 'use strict'
 
+document.onkeydown = function document_onkeydown(event) {
+  switch (event.keyCode) {
+    case 38: // Up
+      event.preventDefault();
+      Module.ccall('up_key_down', null, [], []);
+      break
+    case 37: // Left
+      event.preventDefault();
+      Module.ccall('left_key_down', null, [], []);
+      break
+    case 39: // Right
+      event.preventDefault();
+      Module.ccall('right_key_down', null, [], []);
+      break
+  }
+}
+
+document.onkeyup = function document_onkeyup(event) {
+  switch (event.keyCode) {
+    case 38: // Up
+      event.preventDefault();
+      Module.ccall('up_key_up', null, [], []);
+      break
+    case 37: // Left
+      event.preventDefault();
+      Module.ccall('left_key_up', null, [], []);
+      break
+    case 39: // Right
+      event.preventDefault();
+      Module.ccall('right_key_up', null, [], []);
+      break
+  }
+}
+
 var renderer = PIXI.autoDetectRenderer(600, 400);
 document.body.appendChild(renderer.view);
 var stage = new PIXI.Container();

@@ -1,5 +1,9 @@
-viper_girl_ish.html: compile_emscripten viper_girl_ish.c shell.html myscript.js mylib1.js
+viper_girl_ish.html: compile_emscripten viper_girl_ish.c _ceu_app.c shell.html myscript.js mylib1.js ceu_types.h
 	bash compile_emscripten viper_girl_ish.html viper_girl_ish.c
 
+_ceu_app.c: run.ceu
+	ceu run.ceu
+
 clean:
-	rm viper_girl_ish.html viper_girl_ish.data viper_girl_ish.js
+	rm viper_girl_ish.html viper_girl_ish.data viper_girl_ish.js _ceu_app*
+
