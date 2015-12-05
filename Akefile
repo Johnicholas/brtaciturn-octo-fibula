@@ -1,7 +1,5 @@
-all: chaser_sdl.html
-
-chaser_sdl.html: compile_emscripten viper_girl_ish.c shell.html myscript.js mylib1.js
-	bash compile_emscripten chaser_sdl.html viper_girl_ish.c
+viper_girl_ish.html: compile_emscripten viper_girl_ish.c shell.html myscript.js mylib1.js
+	bash compile_emscripten viper_girl_ish.html viper_girl_ish.c
 
 clean:
-	rm chaser_sdl.html *.data chaser_sdl.js
+	rm viper_girl_ish.html viper_girl_ish.data viper_girl_ish.js

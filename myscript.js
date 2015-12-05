@@ -34,20 +34,19 @@ PIXI.loader.add('tilesetbreakable', 'tilesetbreakable.png');
 PIXI.loader.add('title', 'title.png');
 PIXI.loader.add('vipergirl', 'vipergirl.png');
 PIXI.loader.add('vipertitlescreenughpleasework', 'vipertitlescreenughpleasework.png');
+PIXI.loader.add('bunny', 'bunny.png');
 
-var bunny;
-PIXI.loader.add('bunny', 'bunny.png').load(function (loader, resources) {
-    bunny = new PIXI.Sprite(resources.bunny.texture);
-    bunny.position.x = 400;
-    bunny.position.y = 300;
-    bunny.scale.x = 2;
-    bunny.scale.y = 2;
-    stage.addChild(bunny);
-});
+var bunnies = [];
+
+function tick() {
+    Module.ccall('update', null, [], []);
+    renderer.render(stage);
+    requestAnimationFrame(tick);
+}
 
 PIXI.loader.once('complete', function () {
-    console.log('end of beginning');
-    Module.ccall('begin', 'void', [], []);
+    Module.ccall('begin', null, [], []);
+    tick();
 });
 
 var Module = {
@@ -59,7 +58,6 @@ var Module = {
     printErr: function (text) {
         console.error(text)
     },
-    canvas: document.getElementById('canvas'),
     setStatus: function(text) {
         console.log('status: ' + text);
     },
@@ -68,5 +66,3 @@ var Module = {
         console.log('monitorRunDependencies: ' + left);
     }
 };
-
-

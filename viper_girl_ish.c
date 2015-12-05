@@ -3,23 +3,13 @@
 
 int done = 0;
 
-// extern void set_knob_position(int x, int y);
-extern void spin_bunny();
+extern void new_bunny(int key, int x, int y);
+extern void spin_bunny(int key);
 
 void update() {
-  spin_bunny();
-}
-
-void tick() {
-  EM_ASM(
-         renderer.render(stage);
-         );
-  update();
-  if (done) {
-    emscripten_cancel_main_loop();
-  }
+  spin_bunny(1);
 }
 
 void begin() {
-  emscripten_set_main_loop(tick, 0, 0);
+  new_bunny(1, 100, 100);
 }
