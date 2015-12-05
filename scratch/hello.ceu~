@@ -1,0 +1,102 @@
+input void TICK;
+
+data Leaf with
+    tag SENSERIGHT; // is player to the right?
+or
+    tag SENSELEFT; // is player to the left?
+or
+    tag SENSEUP; // is player above?
+or
+    tag SENSEDOWN; // is player below?
+or
+    tag GORIGHT; // go rightward
+or
+    tag GOLEFT; // go leftward
+or
+    tag GOUP; // go up
+or
+    tag GODOWN; // go down
+or
+    tag SKIP; // do nothing
+end
+
+class LeafHandler with
+    var Leaf& leaf;
+do
+    var int answer = 0;
+    if leaf.SENSEUP then
+      answer = (_player_y < _chaser_y);
+      // _printf("SENSEUP, answer = %d\n", answer);
+    else/if leaf.SENSEDOWN then
+      answer = (_player_y > _chaser_y);
+      // _printf("SENSEDOWN, answer = %d\n", answer);
+    else/if leaf.SENSELEFT then
+      answer = (_player_x < _chaser_x);
+      // _printf("SENSELEFT, answer = %d\n", answer);
+    else/if leaf.SENSERIGHT then
+      answer = (_player_x > _chaser_x);
+      // _printf("SENSERIGHT, answer = %d\n", answer);
+    else/if leaf.GOUP then
+      _chaser_dy = -1 * _CHASER_SPEED; 
+      // _printf("GOUP\n");
+      // await TICK;
+      answer = 1;
+    else/if leaf.GODOWN then
+      _chaser_dy = _CHASER_SPEED;
+      // _printf("GODOWN\n");
+      // await TICK;
+      answer = 1;
+    else/if leaf.GOLEFT then
+      _chaser_dx = -1 * _CHASER_SPEED;
+      // _printf("GOLEFT\n");
+      // await TICK;
+      answer = 1;
+    else/if leaf.GORIGHT then
+      _chaser_dx = _CHASER_SPEED;
+      // _printf("GORIGHT\n");
+      // await TICK;
+      answer = 1;
+    else/if leaf.SKIP then
+      // _printf("SKIP\n");
+      // await TICK;
+      answer = 1;
+    else
+      _assert(false);
+    end
+    escape answer;
+end
+
+
+#include "btree-1.ceu"
+
+par do 
+  pool BTree[] x_behavior =
+    new BTree.SELECTOR(
+        BTree.SEQUENCE(BTree.LEAF(Leaf.SENSERIGHT()), BTree.LEAF(Leaf.GORIGHT())),
+        BTree.SELECTOR(
+            BTree.SEQUENCE(BTree.LEAF(Leaf.SENSELEFT()), BTree.LEAF(Leaf.GOLEFT())),
+            BTree.LEAF(Leaf.SKIP())));
+
+  every TICK do
+    do BTreeTraverse with
+      this.btree = &x_behavior;
+    end;
+  end
+with
+  pool BTree[] y_behavior = 
+    new BTree.SELECTOR(
+        BTree.SEQUENCE(BTree.LEAF(Leaf.SENSEUP()), BTree.LEAF(Leaf.GOUP())),
+        BTree.SELECTOR(
+            BTree.SEQUENCE(BTree.LEAF(Leaf.SENSEDOWN()), BTree.LEAF(Leaf.GODOWN())),
+            BTree.LEAF(Leaf.SKIP())));
+
+  every TICK do
+    do BTreeTraverse with
+      this.btree = &y_behavior;
+    end;
+  end
+end
+
+
+
+

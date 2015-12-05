@@ -1,0 +1,9 @@
+server.document-root = "/home/johnicholas/Dropbox/prep_ludum_dare/"
+
+mimetype.assign = (
+  ".html" => "text/html",
+  ".txt" => "text/plain",
+  ".jpg" => "image/jpeg",
+  ".png" => "image/png",
+  ".css" => "text/css"
+)

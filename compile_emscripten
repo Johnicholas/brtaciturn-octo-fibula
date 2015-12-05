@@ -1,0 +1,1 @@
+emcc -s EXPORTED_FUNCTIONS="['_begin']" --shell-file shell.html --js-library mylib1.js -o $1 $2

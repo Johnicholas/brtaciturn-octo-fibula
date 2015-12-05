@@ -1,0 +1,59 @@
+/*
+ * BTREE-1.CEU
+ *  - defines and implements "SEQUENCE", "SELECTOR", and "LEAF" traversal.
+ *  - depends on the "Leaf" data type and the "LeafHandler" class.
+ *      (no polymorphism)
+ */
+
+// lst.bt1
+// lst.bt1.interpreter
+
+data BTree with
+    tag NIL;
+or
+    tag SEQUENCE with
+        var BTree first;
+        var BTree second;
+    end
+or
+    tag SELECTOR with
+        var BTree first;
+        var BTree second;
+    end
+or
+    tag LEAF with
+        var Leaf leaf;              // Leaf has to be defined elsewhere
+    end
+end
+
+class BTreeTraverse with
+    pool BTree[]& btree;
+do
+    var int ok =
+        traverse t in &&btree do
+            watching *t do
+                if t:SEQUENCE then
+                    var int ok = traverse &&t:SEQUENCE.first;
+                    if ok == 0 then
+                        escape ok;
+                    end
+                    ok = traverse &&t:SEQUENCE.second;
+                    escape ok;
+                else/if t:SELECTOR then
+                    var int ok = traverse &&t:SELECTOR.first;
+                    if ok != 0 then
+                        escape ok;
+                    end
+                    var int ok = traverse &&t:SELECTOR.second;
+                    escape ok;
+                else/if t:LEAF then
+                    var int ok =
+                        do LeafHandler with     // LeafHandler must be defined elsewhere
+                            this.leaf = &t:LEAF.leaf;
+                        end;
+                    escape ok;
+                end
+            end
+        end;
+    escape ok;
+end

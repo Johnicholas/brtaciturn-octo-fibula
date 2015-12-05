@@ -1,0 +1,86 @@
+
+native @nohold _scanf();
+native do
+    ##include <stdio.h>
+end
+
+data Leaf with
+    // is b1 on b2?
+    tag SENSEON with
+        var int b1;
+        var int b2;
+    end
+or
+    // is b1 clear?
+    tag SENSECLEAR with
+        var int b1;
+    end
+or
+    // is b1 on the table?
+    tag SENSEONTABLE with
+        var int b1;
+    end
+or
+    // move bm from bf to bt
+    tag MOVEBLOCKTOBLOCK with
+        var int bm;
+        var int bf;
+        var int bt;
+    end
+or
+    // move bm from bf to table
+    tag MOVETOTABLE with
+        var int bm;
+        var int bf;
+    end
+or
+    // move bm from table to bt
+    tag MOVEFROMTABLE with
+        var int bm;
+        var int bt;
+    end
+end
+
+class LeafHandler with
+    var Leaf& leaf;
+do
+    var int answer = 0;
+    ___fpurge(_stdin);
+    if leaf.SENSEON then
+        _printf("Is block %c on block %c? [0/1] ", leaf.SENSEON.b1,
+                                             leaf.SENSEON.b2);
+        _scanf("%d", &&answer);
+        if answer then _printf("=> saw yes\n"); else _printf("=> saw no\n"); end
+    else/if leaf.SENSECLEAR then
+        _printf("Is block %c clear?\n", leaf.SENSECLEAR.b1);
+        _scanf("%d", &&answer);
+        if answer then _printf("=> saw yes\n"); else _printf("=> saw no\n"); end
+    else/if leaf.SENSEONTABLE then
+        _printf("Is block %c on the table? [0/1] ", leaf.SENSEONTABLE.b1);
+        _scanf("%d", &&answer);
+        if answer then _printf("=> saw yes\n"); else _printf("=> saw no\n"); end
+    else/if leaf.MOVEBLOCKTOBLOCK then
+        _printf("=> moving block %c from block %c to block %c\n",
+                leaf.MOVEBLOCKTOBLOCK.bm,
+                leaf.MOVEBLOCKTOBLOCK.bf,
+                leaf.MOVEBLOCKTOBLOCK.bt);
+        answer = 1;
+    else/if leaf.MOVETOTABLE then
+        _printf("=> moving block %c from block %c to the table\n",
+                leaf.MOVETOTABLE.bm,
+                leaf.MOVETOTABLE.bf);
+        answer = 1;
+    else/if leaf.MOVEFROMTABLE then
+        _printf("=> moving block %c from the table to block %c\n",
+                leaf.MOVEFROMTABLE.bm,
+                leaf.MOVEFROMTABLE.bt);
+        answer = 1;
+    else
+        _assert(false);
+    end
+    escape answer;
+end
+
+#include "btree-1.ceu"
+
+

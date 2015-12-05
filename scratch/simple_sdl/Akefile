@@ -1,0 +1,10 @@
+chaser_sdl: chaser_sdl.c compile _ceu_app.c
+	bash compile chaser_sdl chaser_sdl.c
+
+chaser_sdl.html: chaser_sdl.c _ceu_app.c
+	bash compile_emscripten chaser_sdl.html chaser_sdl.c
+
+_ceu_app.c: chaser.ceu btree-1.ceu
+	ceu chaser.ceu
+
+

@@ -1,0 +1,43 @@
+// BTREE.CEU
+//  - defines and implements "SEQ", "PAR", and "LEAF" traversal.
+//  - depends on the "Leaf" data type and the "LeafHandler" class.
+//      (no polymorphism)
+
+data BTree with
+    tag NIL;
+or
+    tag SEQ with
+        var BTree first;
+        var BTree second;
+    end
+or
+    tag PAR with
+        var BTree left;
+        var BTree right;
+    end
+or
+    tag LEAF with
+        var Leaf leaf;              // Leaf has to be defined elsewhere
+    end
+end
+
+class BTreeTraverse with
+    pool BTree[]& btree;
+do
+    traverse t in btree do
+        if t:SEQ then
+            traverse t:SEQ.first;
+            traverse t:SEQ.second;
+        else/if t:PAR then
+            par/and do
+                traverse t:PAR.left;
+            with
+                traverse t:PAR.right;
+            end
+        else/if t:LEAF then
+            do LeafHandler with     // LeafHandler must be defined elsewhere
+                this.leaf = t:LEAF.leaf;
+            end;
+        end
+    end
+end
