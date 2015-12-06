@@ -1,4 +1,4 @@
-viper_girl_ish.html: compile_emscripten viper_girl_ish.c _ceu_app.c shell.html myscript.js mylib1.js ceu_types.h
+viper_girl_ish.html: compile_emscripten viper_girl_ish.c _ceu_app.c shell.html myscript.js mylib.js ceu_types.h
 	bash compile_emscripten viper_girl_ish.html viper_girl_ish.c
 
 _ceu_app.c: run.ceu

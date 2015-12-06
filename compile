@@ -1,3 +1,0 @@
-gcc -o $1 $2 `sdl-config --libs --cflags` -lm -Werror
-
-
