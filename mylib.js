@@ -13,6 +13,10 @@ mergeInto(LibraryManager.library, {
         bunnies[which] = it;
         stage.addChild(it);
     },
+    free_bunny: function(which) {
+        stage.removeChild(bunnies[which]);
+        delete bunnies[which];
+    },
     spin_bunny: function(which) {
         bunnies[which].rotation += 0.01;
     },

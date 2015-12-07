@@ -6,58 +6,81 @@ input void LEFT_KEY_UP;
 input void RIGHT_KEY_UP;
 input void UPDATE;
 output (int, int, int) NEW_BUNNY;
+output (int) FREE_BUNNY;
 output (int) SPIN_BUNNY;
 output (int, int, int) SET_BUNNY_POSITION;
 
-var int up_down = 0;
-var int left_down = 0;
-var int right_down = 0;
-var int x = 200;
-var int y = 300;
 
-emit NEW_BUNNY => (1, 200, 100);
-emit NEW_BUNNY => (2, 100, 200);
-emit NEW_BUNNY => (3, 300, 200);
-emit NEW_BUNNY => (4, x, y);
+loop do
+  var int ticker = 0;
+  par/or do
+    loop do
+      await UPDATE;
+      if ticker < 1000 then
+        ticker = ticker + 1;
+      else
+        break;
+      end
+    end
+  with
+    var int up_down = 0;
+    var int left_down = 0;
+    var int right_down = 0;
+    var int x = 200;
+    var int y = 300;
 
-par do
-  every UP_KEY_DOWN do
-    up_down = 1;
-  end
-with
-  every LEFT_KEY_DOWN do
-    left_down = 1;
-  end
-with
-  every RIGHT_KEY_DOWN do
-    right_down = 1;
-  end
-with
-  every UP_KEY_UP do
-    up_down = 0;
-  end
-with
-  every LEFT_KEY_UP do
-    left_down = 0;
-  end
-with
-  every RIGHT_KEY_UP do
-    right_down = 0;
-  end
-with
-  every UPDATE do
-    if up_down then
-      emit SPIN_BUNNY => 1;
-      y = y - 1;
+    emit NEW_BUNNY => (1, 200, 100);
+    emit NEW_BUNNY => (2, 100, 200);
+    emit NEW_BUNNY => (3, 300, 200);
+    emit NEW_BUNNY => (4, x, y);
+
+    finalize with
+      emit FREE_BUNNY => 1;
+      emit FREE_BUNNY => 2;
+      emit FREE_BUNNY => 3;
+      emit FREE_BUNNY => 4;
     end
-    if left_down then
-      emit SPIN_BUNNY => 2;
-      x = x - 1;
+
+    par do
+      every UP_KEY_DOWN do
+        up_down = 1;
+      end
+    with
+      every LEFT_KEY_DOWN do
+        left_down = 1;
+      end
+    with
+      every RIGHT_KEY_DOWN do
+        right_down = 1;
+      end
+    with
+      every UP_KEY_UP do
+        up_down = 0;
+      end
+    with
+      every LEFT_KEY_UP do
+        left_down = 0;
+      end
+    with
+      every RIGHT_KEY_UP do
+        right_down = 0;
+      end
+    with
+      every UPDATE do
+        if up_down then
+          emit SPIN_BUNNY => 1;
+          y = y - 1;
+        end
+        if left_down then
+          emit SPIN_BUNNY => 2;
+          x = x - 1;
+        end
+        if right_down then
+          emit SPIN_BUNNY => 3;
+          x = x + 1;
+        end
+        emit SET_BUNNY_POSITION => (4, x, y);
+      end
     end
-    if right_down then
-      emit SPIN_BUNNY => 3;
-      x = x + 1;
-    end
-    emit SET_BUNNY_POSITION => (4, x, y);
   end
 end
