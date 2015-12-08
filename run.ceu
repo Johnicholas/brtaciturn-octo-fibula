@@ -11,9 +11,9 @@ output (int) SPIN_BUNNY;
 output (int, int, int) SET_BUNNY_POSITION;
 
 class Keys with
-  var bool up_down = false;
-  var bool left_down = false;
-  var bool right_down = false;
+  var bool& up_down;
+  var bool& left_down;
+  var bool& right_down;
 do
   par do
     every UP_KEY_DOWN do
@@ -42,6 +42,23 @@ do
   end
 end
 
+class SpinBunny with
+  var int id;
+  var int x;
+  var int y;
+  var bool& should_spin;
+do
+  emit NEW_BUNNY => (id, x, y);
+  finalize with
+    emit FREE_BUNNY => id;
+  end
+  every UPDATE do
+    if should_spin then
+      emit SPIN_BUNNY => id;
+    end
+  end
+end
+
 loop do
   var int ticker = 0;
   par/or do
@@ -54,57 +71,53 @@ loop do
       end
     end
   with
-    var Keys keys;
+    var bool up_down = false;
+    var bool left_down = false;
+    var bool right_down = false;
+    var Keys keys with
+      this.up_down = &up_down;
+      this.left_down = &left_down;
+      this.right_down = &right_down;
+    end;
 
-    par do
-      emit NEW_BUNNY => (1, 200, 100);
-      finalize with
-        emit FREE_BUNNY => 1;
+    var SpinBunny one with
+      this.id = 1;
+      this.x = 200;
+      this.y = 100;
+      this.should_spin = &up_down;
+    end;
+
+    var SpinBunny two with
+      this.id = 2;
+      this.x = 100;
+      this.y = 200;
+      this.should_spin = &left_down;
+    end;
+
+    var SpinBunny three with
+      this.id = 3;
+      this.x = 300;
+      this.y = 200;
+      this.should_spin = &right_down;
+    end;
+
+    var int x = 200;
+    var int y = 300;
+    emit NEW_BUNNY => (4, x, y);
+    finalize with
+      emit FREE_BUNNY => 4;
+    end
+    every UPDATE do
+      if keys.up_down then
+        y = y - 1;
       end
-      every UPDATE do
-        if keys.up_down then
-          emit SPIN_BUNNY => 1;
-        end
+      if keys.left_down then
+        x = x - 1;
       end
-    with
-      emit NEW_BUNNY => (2, 100, 200);
-      finalize with
-        emit FREE_BUNNY => 2;
+      if keys.right_down then
+        x = x + 1;
       end
-      every UPDATE do
-        if keys.left_down then
-          emit SPIN_BUNNY => 2;
-        end
-      end
-    with
-      emit NEW_BUNNY => (3, 300, 200);
-      finalize with
-        emit FREE_BUNNY => 3;
-      end
-      every UPDATE do
-        if keys.right_down then
-          emit SPIN_BUNNY => 3;
-        end
-      end
-    with
-      var int x = 200;
-      var int y = 300;
-      emit NEW_BUNNY => (4, x, y);
-      finalize with
-        emit FREE_BUNNY => 4;
-      end
-      every UPDATE do
-        if keys.up_down then
-          y = y - 1;
-        end
-        if keys.left_down then
-          x = x - 1;
-        end
-        if keys.right_down then
-          x = x + 1;
-        end
-        emit SET_BUNNY_POSITION => (4, x, y);
-      end
+      emit SET_BUNNY_POSITION => (4, x, y);
     end
   end
 end
