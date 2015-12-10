@@ -7,12 +7,16 @@ extern void new_bunny(int key, int x, int y);
 extern void spin_bunny(int key);
 extern void set_bunny_position(int key, int x, int y);
 extern void free_bunny(int key);
+extern void new_splash(int key);
+extern void free_splash(int key);
 
 // These three lines are part of the "Ceu invokes C" bindings.
 #define ceu_out_emit_NEW_BUNNY(X) new_bunny(X->_1, X->_2, X->_3)
 #define ceu_out_emit_SPIN_BUNNY(X) spin_bunny(X->_1)
 #define ceu_out_emit_SET_BUNNY_POSITION(X) set_bunny_position(X->_1, X->_2, X->_3)
 #define ceu_out_emit_FREE_BUNNY(X) free_bunny(X->_1)
+#define ceu_out_emit_NEW_SPLASH(X) new_splash(X->_1)
+#define ceu_out_emit_FREE_SPLASH(X) free_splash(X->_1)
 
 #define ceu_out_assert(X) assert(X)
 #define ceu_out_log(X) printf("%s\n", X)
@@ -25,28 +29,14 @@ static tceu_app app;
 
 // These functions are exported to javascript by the emcc command line
 // The bodies of these functions are the "C invokes Ceu" bindings.
-void up_key_down() {
-  ceu_sys_go( &app, CEU_IN_UP_KEY_DOWN, NULL );
+void key_down(int which) {
+  tceu__int payload = { which };
+  ceu_sys_go( &app, CEU_IN_KEY_DOWN, &payload );
 }
 
-void left_key_down() {
-  ceu_sys_go( &app, CEU_IN_LEFT_KEY_DOWN, NULL );
-}
-
-void right_key_down() {
-  ceu_sys_go( &app, CEU_IN_RIGHT_KEY_DOWN, NULL );
-}
-
-void up_key_up() {
-  ceu_sys_go( &app, CEU_IN_UP_KEY_UP, NULL );
-}
-
-void left_key_up() {
-  ceu_sys_go( &app, CEU_IN_LEFT_KEY_UP, NULL );
-}
-
-void right_key_up() {
-  ceu_sys_go( &app, CEU_IN_RIGHT_KEY_UP, NULL );
+void key_up(int which) {
+  tceu__int payload = { which };
+  ceu_sys_go( &app, CEU_IN_KEY_UP, &payload );
 }
 
 void update() {

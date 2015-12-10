@@ -1,37 +1,13 @@
 'use strict'
 
 document.onkeydown = function document_onkeydown(event) {
-  switch (event.keyCode) {
-    case 38: // Up
-      event.preventDefault();
-      Module.ccall('up_key_down', null, [], []);
-      break
-    case 37: // Left
-      event.preventDefault();
-      Module.ccall('left_key_down', null, [], []);
-      break
-    case 39: // Right
-      event.preventDefault();
-      Module.ccall('right_key_down', null, [], []);
-      break
-  }
+  event.preventDefault();
+  Module.ccall('key_down', null, ['number'], [event.keyCode]);
 }
 
 document.onkeyup = function document_onkeyup(event) {
-  switch (event.keyCode) {
-    case 38: // Up
-      event.preventDefault();
-      Module.ccall('up_key_up', null, [], []);
-      break
-    case 37: // Left
-      event.preventDefault();
-      Module.ccall('left_key_up', null, [], []);
-      break
-    case 39: // Right
-      event.preventDefault();
-      Module.ccall('right_key_up', null, [], []);
-      break
-  }
+  event.preventDefault();
+  Module.ccall('key_up', null, ['number'], [event.keyCode]);
 }
 
 var renderer = PIXI.autoDetectRenderer(600, 400);
@@ -72,6 +48,24 @@ PIXI.loader.add('bunny', 'bunny.png');
 
 var bunnies = [];
 
+function splashtext(text) {
+  return new PIXI.Text(text, 
+                       {font: "50px Arial", fill: "white", align: "center"}
+                      );
+}
+
+var stages = [
+  splashtext("Hello, it's me"),
+  splashtext("I was wondering if after all these years you'd like to meet"),
+  splashtext("To go over everything"),
+  splashtext("They say that time's supposed to heal ya"),
+  splashtext("But I ain't done much healing"),
+  splashtext("Hello, can you hear me"),
+  splashtext("I'm in California dreaming about who we used to be"),
+  splashtext("When we were younger and free"),
+  splashtext("I've forgotten how it felt before the world fell at our feet"),
+];
+
 function tick() {
     Module.ccall('update', null, [], []);
     renderer.render(stage);
@@ -83,9 +77,13 @@ PIXI.loader.once('complete', function () {
     tick();
 });
 
+function start() {
+  PIXI.loader.load();
+}
+
 var Module = {
     preRun: [],
-    postRun: [],
+    postRun: [start],
     print: function (text) {
         console.log(text)
     },

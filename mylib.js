@@ -23,6 +23,12 @@ mergeInto(LibraryManager.library, {
     set_bunny_position: function(which, x, y) {
         bunnies[which].position.x = x;
         bunnies[which].position.y = y;
+    },
+    new_splash: function(which) {
+        stage.addChild(stages[which]);
+    },
+    free_splash: function(which) {
+        stage.removeChild(stages[which]);
     }
 });
 

@@ -1,1 +1,1 @@
-emcc -s EXPORTED_FUNCTIONS="['_begin', '_update', '_up_key_down', '_left_key_down', '_right_key_down', '_up_key_up', '_left_key_up', '_right_key_up']" --shell-file shell.html --js-library mylib.js -o $1 $2
+emcc -O2 -s EXPORTED_FUNCTIONS="['_begin', '_update', '_key_down', '_key_up']" --shell-file shell.html --js-library mylib.js -o $1 $2
