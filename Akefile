@@ -1,9 +1,9 @@
-viper_girl_ish.html: compile_emscripten viper_girl_ish.c _ceu_app.c shell.html myscript.js mylib.js ceu_types.h
-	bash compile_emscripten viper_girl_ish.html viper_girl_ish.c
+garden.html: compile_emscripten garden.c _ceu_app.c shell.html myscript.js mylib.js ceu_types.h
+	bash compile_emscripten garden.html garden.c
 
-_ceu_app.c: viper_girl_ish.ceu
-	ceu viper_girl_ish.ceu
+_ceu_app.c: garden.ceu
+	ceu garden.ceu
 
 clean:
-	rm viper_girl_ish.html viper_girl_ish.html.mem viper_girl_ish.js _ceu_app*
+	rm garden.html garden.html.mem garden.js _ceu_app*
 

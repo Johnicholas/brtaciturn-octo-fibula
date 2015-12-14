@@ -1,0 +1,1104 @@
+input int KEY_DOWN;
+input int KEY_UP;
+input void UPDATE;
+input (int, int) MOUSE_DOWN;
+input (int, int) MOUSE_UP;
+input (int, int) MOUSE_OVER;
+input void MOUSE_OUT;
+input (int, int) MOUSE_MOVE;
+
+#define DIRT 1
+#define GROWING 2
+#define FLOURISHING 3
+#define OVERGROWN 4
+#define WATERING_CAN 5
+#define PHILODENDRON 9
+#define ORCHID 10
+#define HELICONIA 11
+#define PITCHER 12
+#define SHOVEL 13
+#define BAG 14
+#define BIRB1_FLYING 15
+#define BIRB1_SITTING 16
+#define BIRB2_FLYING 17
+#define BIRB2_SITTING 18
+#define BIRB3_FLYING 19
+#define BIRB3_SITTING 20
+#define SEED 21
+
+#define TOOL_ROW_START 215
+#define TOOL_ROW_SPACING 135
+#define TOOL_ROW_HALFWIDTH 50
+#define TOOL_ROW_HEIGHT 800
+
+output (int, int, int, int, int) NEW_SPRITE;
+output int FREE_SPRITE;
+output (int, int, int, int) SET_SPRITE_POSITION;
+output (int, int) SET_SPRITE_TINT;
+output (int, float) SET_SPRITE_ROTATION;
+output (int, int) SET_COUNT;
+output (int) SET_MUTED;
+output (_charptr) PRINT_DEBUG;
+
+var int gensym = 1;
+
+native do
+  int seeds[4] = { -1, 0, 0, 0 };
+end
+
+class Delay with
+  var int ticks = 100;
+  event void ok;
+do
+  var int ticker = 0;
+  loop do
+    await UPDATE;
+    if ticker < ticks then
+      ticker = ticker + 1;
+    else
+      break;
+    end
+  end
+  emit ok;
+end
+
+class Garden with
+  var float score = 0;
+  var int t0_plants = 0;
+  var int t1_plants = 0;
+  var int t2_plants = 0;
+  var int t3_plants = 0;
+  event (int) go_dig;
+  event (int, int) go_plant;
+  event (int) go_water;
+do
+  loop do
+    do Delay with
+      this.ticks = 60;
+    end;
+    _printf("score = %f, (%d, %d, %d, %d)\n", score, t0_plants, t1_plants, t2_plants, t3_plants);
+  end;
+end
+
+class Konami with
+  event void ok;
+do
+  loop do
+    var int which = await KEY_DOWN;
+    if which != 38 then continue; end
+    which = await KEY_DOWN;
+    if which != 38 then continue; end
+    which = await KEY_DOWN;
+    if which != 40 then continue; end
+    which = await KEY_DOWN;
+    if which != 40 then continue; end
+    which = await KEY_DOWN;
+    if which != 37 then continue; end
+    which = await KEY_DOWN;
+    if which != 39 then continue; end
+    which = await KEY_DOWN;
+    if which != 37 then continue; end
+    which = await KEY_DOWN;
+    if which != 39 then continue; end
+    which = await KEY_DOWN;
+    if which != 66 then continue; end
+    which = await KEY_DOWN;
+    if which != 65 then continue; end
+    break;
+  end
+  emit ok;
+end
+
+#define DEADLEAF 0xBBBB51
+#define GREENLEAF 0x00FF00
+#define WETLEAF 0x00FFFF
+#define WET_BOUNDARY 16
+#define DRY_BOUNDARY 8
+
+class Growing with
+  var int& gensym;
+  var int x;
+  var int y;
+  var int layer;
+  event void go_water;
+  event bool ok; // true if survived
+do
+  var int id = gensym;
+  gensym = gensym + 1;
+  emit NEW_SPRITE => (id, x, y - 60, GROWING, layer);
+  finalize with
+    emit FREE_SPRITE => id;
+  end
+  var int water = 10;
+  if water > WET_BOUNDARY then
+    emit SET_SPRITE_TINT => (id, WETLEAF);
+  else/if water < DRY_BOUNDARY then
+    emit SET_SPRITE_TINT => (id, DEADLEAF);
+  else
+    emit SET_SPRITE_TINT => (id, GREENLEAF);
+  end
+  par/or do
+    do Delay with
+      this.ticks = 1200 + _d(400) + _d(400) + _d(400);
+    end;
+  with
+    loop do
+      do Delay with
+        this.ticks = 40 + _d(13) + _d(13) + _d(13);
+      end;
+      if water > 0 then
+        water = water - 1;
+        if water > WET_BOUNDARY then
+          emit SET_SPRITE_TINT => (id, WETLEAF);
+        else/if water < DRY_BOUNDARY then
+          emit SET_SPRITE_TINT => (id, DEADLEAF);
+        else
+          emit SET_SPRITE_TINT => (id, GREENLEAF);
+        end
+      else
+        break;
+      end
+    end
+  with
+    loop do
+      await go_water;
+      water = water + 3;
+      if water > 20 then
+        water = 20;
+      end
+      if water > WET_BOUNDARY then
+        emit SET_SPRITE_TINT => (id, WETLEAF);
+      else/if water < DRY_BOUNDARY then
+        emit SET_SPRITE_TINT => (id, DEADLEAF);
+      else
+        emit SET_SPRITE_TINT => (id, GREENLEAF);
+      end
+    end
+  end
+  emit ok => (water >= DRY_BOUNDARY and water <= WET_BOUNDARY);
+end
+
+native do
+  int plot_occupied[6] = { 0, 0, 0, 0, 0, 0 };
+  int plot_x[6] = { 375, 643, 930, 310, 645, 977 };
+  int plot_y[6] = { 525, 525, 525, 680, 680, 680 };
+  int plot_layer[6] = { 1, 1, 1, 2, 2, 2 };
+end
+
+class Philodendron with
+  var int& gensym;
+  var Garden& garden;
+  var int plot;
+do
+  _plot_occupied[plot] = 1;
+  finalize with
+    _plot_occupied[plot] = 0;
+  end
+  var int x = _plot_x[plot];
+  var int y = _plot_y[plot];
+  var int layer = _plot_layer[plot];
+  par/or do
+    loop do
+      var int incoming_plot = await garden.go_dig;
+      if incoming_plot == plot then
+        _printf("Philodendron is dug up!\n");
+        break;
+      end
+    end
+  with
+    var Growing growing with
+      this.gensym = &gensym;
+      this.x = x;
+      this.y = y;
+      this.layer = layer;
+    end;
+    var bool survived = false;
+    par/or do
+      loop do
+        var int incoming_plot = await garden.go_water;
+        if incoming_plot == plot then
+          _printf("watering the philodendron growing in %d\n", plot);
+          emit growing.go_water;
+        end
+      end
+    with
+      survived = await growing.ok;
+    end
+    if survived then
+      garden.t0_plants = garden.t0_plants + 1;
+      garden.score = garden.score + 0.25;
+      finalize with
+        garden.t0_plants = garden.t0_plants - 1;
+        garden.score = garden.score - 0.25;
+      end
+      var int id = gensym;
+      gensym = gensym + 1;
+      emit NEW_SPRITE => (id, x, y, PHILODENDRON, layer);
+      finalize with
+        _printf("flouishing over\n");
+        emit FREE_SPRITE => id;
+      end
+      await FOREVER;
+    end
+  end
+end
+
+class Pitcher with
+  var int& gensym;
+  var Garden& garden;
+  var int plot;
+do
+  _plot_occupied[plot] = 1;
+  finalize with
+    _plot_occupied[plot] = 0;
+  end
+  var int x = _plot_x[plot];
+  var int y = _plot_y[plot];
+  var int layer = _plot_layer[plot];
+  par/or do
+    loop do
+      var int incoming_plot = await garden.go_dig;
+      if incoming_plot == plot then
+        _printf("pitcher plant dug up\n");
+        break;
+      end
+    end
+  with
+    var Growing growing with
+      this.gensym = &gensym;
+      this.x = x;
+      this.y = y;
+      this.layer = layer;
+    end;
+    var bool survived = false;
+    par/or do
+      loop do
+        var int incoming_plot = await garden.go_water;
+        if incoming_plot == plot then
+          emit growing.go_water;
+        end
+      end
+    with
+      survived = await growing.ok;
+    end
+    if survived then
+      garden.t1_plants = garden.t1_plants + 1;
+      garden.score = garden.score + 0.5;
+      finalize with
+        garden.t1_plants = garden.t1_plants - 1;
+        garden.score = garden.score - 0.5;
+      end
+      var int id = gensym;
+      gensym = gensym + 1;
+      emit NEW_SPRITE => (id, x, y, PITCHER, layer);
+      finalize with
+        _printf("flouishing over\n");
+        emit FREE_SPRITE => id;
+      end
+      await FOREVER;
+    end
+  end
+end
+
+class Orchid with
+  var int& gensym;
+  var Garden& garden;
+  var int plot;
+do
+  _plot_occupied[plot] = 1;
+  finalize with
+    _plot_occupied[plot] = 0;
+  end
+  var int x = _plot_x[plot];
+  var int y = _plot_y[plot];
+  var int layer = _plot_layer[plot];
+  par/or do
+    loop do
+      var int incoming_plot = await garden.go_dig;
+      if incoming_plot == plot then
+        _printf("orchid dug up\n");
+        break;
+      end
+    end
+  with
+    var Growing growing with
+      this.gensym = &gensym;
+      this.x = x;
+      this.y = y;
+      this.layer = layer;
+    end;
+    var bool survived = false;
+    par/or do
+      loop do
+        var int incoming_plot = await garden.go_water;
+        if incoming_plot == plot then
+          emit growing.go_water;
+        end
+      end
+    with
+      survived = await growing.ok;
+    end
+    if survived then
+      garden.t2_plants = garden.t2_plants + 1;
+      garden.score = garden.score + 1.0;
+      finalize with
+        garden.t2_plants = garden.t2_plants - 1;
+        garden.score = garden.score - 1.0;
+      end
+      var int id = gensym;
+      gensym = gensym + 1;
+      emit NEW_SPRITE => (id, x, y, ORCHID, layer);
+      finalize with
+        _printf("flouishing over\n");
+        emit FREE_SPRITE => id;
+      end
+      await FOREVER;
+    end
+  end
+end
+
+class Heliconia with
+  var int& gensym;
+  var Garden& garden;
+  var int plot;
+do
+  _plot_occupied[plot] = 1;
+  finalize with
+    _plot_occupied[plot] = 0;
+  end
+  var int x = _plot_x[plot];
+  var int y = _plot_y[plot];
+  var int layer = _plot_layer[plot];
+  par/or do
+    loop do
+      var int incoming_plot = await garden.go_dig;
+      if incoming_plot == plot then
+        _printf("heliconia dug up\n");
+        break;
+      end
+    end
+  with
+    var Growing growing with
+      this.gensym = &gensym;
+      this.x = x;
+      this.y = y;
+      this.layer = layer;
+    end;
+    var bool survived = false;
+    par/or do
+      loop do
+        var int incoming_plot = await garden.go_water;
+        if incoming_plot == plot then
+          emit growing.go_water;
+        end
+      end
+    with
+      survived = await growing.ok;
+    end
+    if survived then
+      garden.t3_plants = garden.t3_plants + 1;
+      garden.score = garden.score + 2.0;
+      finalize with
+        garden.t3_plants = garden.t3_plants - 1;
+        garden.score = garden.score - 2.0;
+      end
+      var int id = gensym;
+      gensym = gensym + 1;
+      emit NEW_SPRITE => (id, x, y, HELICONIA, layer);
+      finalize with
+        _printf("flouishing over\n");
+        emit FREE_SPRITE => id;
+      end
+      await FOREVER;
+    end
+  end
+end
+
+#define TOPLEFTX 258
+#define TOPMIDLEFTX 512
+#define TOPMIDRIGHTX 778
+#define TOPRIGHTX 1030
+#define TOP 485
+#define MID 614
+#define BOT 800
+#define BOTLEFTX 111
+#define BOTMIDLEFTX 461
+#define BOTMIDRIGHTX 828
+#define BOTRIGHTX 1175
+
+// topleft = 258, 485
+// topmidleft = 512, 485
+// topmidright = 778, 485
+// topright = 1030, 485
+// mid = _, 614
+// botleft = 111, 800
+// botmidleft = 461, 800
+// botmidright = 828, 800
+// botright = 1175, 800
+
+// right border is topright to botright
+// right mid border is topmidright to botmidright
+// left mid border is topmidleft to botmidleft
+// left border is topeft to botleft
+
+#define CROSS(AX, AY, BX, BY, X, Y) (((BX - AX)*(Y - AY) - (BY - AY) * (X - AX)) > 0)
+#define RIGHTBORDER(X, Y) CROSS(TOPRIGHTX, TOP, BOTRIGHTX, BOT, X, Y)
+#define RIGHTMIDBORDER(X, Y) CROSS(TOPMIDRIGHTX, TOP, BOTMIDRIGHTX, BOT, X, Y)
+#define LEFTMIDBORDER(X, Y) CROSS(TOPMIDLEFTX, TOP, BOTMIDLEFTX, BOT, X, Y)
+#define LEFTBORDER(X, Y) CROSS(TOPLEFTX, TOP, BOTLEFTX, BOT, X, Y)
+
+class BagActive with
+  var int id;
+  var int& x;
+  var int& y;
+  var int seed;
+  var Garden& garden;
+  event void ok;
+do
+  var int patch = -1;
+  emit SET_SPRITE_ROTATION => (id, -1.0);
+  finalize with
+    emit SET_SPRITE_ROTATION => (id, 0.0);
+  end
+  par/or do
+    (x, y) = await MOUSE_UP;
+  with
+    loop do
+      var bool rightborder = RIGHTBORDER(x, y);
+      var bool rightmidborder = RIGHTMIDBORDER(x, y);
+      var bool leftmidborder = LEFTMIDBORDER(x, y);
+      var bool leftborder = LEFTBORDER(x, y);
+
+      if y > TOP and y <= MID then
+        if rightborder and not rightmidborder then
+          if patch != 2 then
+            patch = 2;
+            emit garden.go_plant => (seed, 2);
+          end
+        else/if rightmidborder and not leftmidborder then
+          if patch != 1 then
+            patch = 1;
+            emit garden.go_plant => (seed, 1);
+          end
+        else/if leftmidborder and not leftborder then
+          if patch != 0 then
+            patch = 0;
+            emit garden.go_plant => (seed, 0);
+          end
+        else
+           patch = -1;
+        end
+      else/if y > MID and y <= BOT then
+        if rightborder and not rightmidborder then
+          if patch != 5 then
+            patch = 5;
+            emit garden.go_plant => (seed, 5);
+          end;
+        else/if rightmidborder and not leftmidborder then
+          if patch != 4 then
+            patch = 4;
+            emit garden.go_plant => (seed, 4);
+          end;
+        else/if leftmidborder and not leftborder then
+          if patch != 3 then
+            patch = 3;
+            emit garden.go_plant => (seed, 3);
+          end;
+        else
+          patch = -1;
+        end
+      end
+
+      (x, y) = await MOUSE_MOVE;
+    end
+  end
+  emit ok;
+end
+
+class Bag with
+  var int& gensym;
+  var int x;
+  var int y;
+  var int seed;
+  var Garden& garden;
+  event void ok;
+do
+  var int id = gensym;
+  gensym = gensym + 1;
+  emit NEW_SPRITE => (id, x, y, BAG, 3);
+  finalize with
+    emit FREE_SPRITE => id;
+  end
+
+  par/or do
+    loop do
+      (x, y) = await MOUSE_MOVE;
+      emit SET_SPRITE_POSITION => (id, x, y, 1);
+    end
+  with
+    loop do
+      par/or do
+        (x, y) = await MOUSE_UP;
+        break;
+      with
+        (x, y) = await MOUSE_DOWN;
+      end
+      do BagActive with
+        this.id = id;
+        this.x = &x;
+        this.y = &y;
+        this.seed = seed;
+        this.garden = &garden;
+      end;
+    end
+  end
+  emit ok;
+end
+
+class WateringCanActive with
+  var int id;
+  var int& x;
+  var int& y;
+  var Garden& garden;
+  event void ok;
+do
+  emit SET_SPRITE_ROTATION => (id, -1.0);
+  finalize with
+    emit SET_SPRITE_ROTATION => (id, 0.0);
+  end
+  par/or do
+    (x, y) = await MOUSE_UP;
+  with
+    loop do
+      var bool rightborder = RIGHTBORDER(x, y);
+      var bool rightmidborder = RIGHTMIDBORDER(x, y);
+      var bool leftmidborder = LEFTMIDBORDER(x, y);
+      var bool leftborder = LEFTBORDER(x, y);
+
+      if y > TOP and y <= MID then
+        if rightborder and not rightmidborder then
+          emit garden.go_water => 2;
+        else/if rightmidborder and not leftmidborder then
+          emit garden.go_water => 1;
+        else/if leftmidborder and not leftborder then
+           emit garden.go_water => 0;
+        end
+      else/if y > MID and y <= BOT then
+        if rightborder and not rightmidborder then
+          emit garden.go_water => 5;
+        else/if rightmidborder and not leftmidborder then
+          emit garden.go_water => 4;
+        else/if leftmidborder and not leftborder then
+          emit garden.go_water => 3;
+        end
+      end
+
+      (x, y) = await MOUSE_MOVE;
+    end
+  end
+  emit ok;
+end
+
+class WateringCan with
+  var int& gensym;
+  var int x;
+  var int y;
+  var Garden& garden;
+  event void ok;
+do
+  var int id = gensym;
+  gensym = gensym + 1;
+  emit NEW_SPRITE => (id, x, y, WATERING_CAN, 3);
+  finalize with
+    emit FREE_SPRITE => id;
+  end
+
+  par/or do
+    loop do
+      (x, y) = await MOUSE_MOVE;
+      emit SET_SPRITE_POSITION => (id, x, y, 1);
+    end
+  with
+    loop do
+      par/or do
+        (x, y) = await MOUSE_UP;
+        break;
+      with
+        (x, y) = await MOUSE_DOWN;
+      end
+      do WateringCanActive with
+        this.id = id;
+        this.x = &x;
+        this.y = &y;
+        this.garden = &garden;
+      end;
+    end
+  end
+  emit ok;
+end
+
+class ShovelActive with
+  var int id;
+  var int& x;
+  var int& y;
+  var Garden& garden;
+  event void ok;
+do
+  emit SET_SPRITE_ROTATION => (id, -1.0);
+  finalize with
+    emit SET_SPRITE_ROTATION => (id, 0.0);
+  end
+  par/or do
+    (x, y) = await MOUSE_UP;
+  with
+    loop do
+      var bool rightborder = RIGHTBORDER(x, y);
+      var bool rightmidborder = RIGHTMIDBORDER(x, y);
+      var bool leftmidborder = LEFTMIDBORDER(x, y);
+      var bool leftborder = LEFTBORDER(x, y);
+
+      if y > TOP and y <= MID then
+        if rightborder and not rightmidborder then
+          _printf("dig plot 2\n");
+          emit garden.go_dig => 2;
+        else/if rightmidborder and not leftmidborder then
+          _printf("dig plot 1\n");
+          emit garden.go_dig => 1;
+        else/if leftmidborder and not leftborder then
+          _printf("dig plot 0\n");
+           emit garden.go_dig => 0;
+        end
+      else/if y > MID and y <= BOT then
+        if rightborder and not rightmidborder then
+          _printf("dig plot 5\n");
+          emit garden.go_dig => 5;
+        else/if rightmidborder and not leftmidborder then
+          _printf("dig plot 4\n");
+          emit garden.go_dig => 4;
+        else/if leftmidborder and not leftborder then
+          _printf("dig plot 3\n");
+          emit garden.go_dig => 3;
+        end
+      end
+
+      (x, y) = await MOUSE_MOVE;
+    end
+  end
+  emit ok;
+end
+
+class Shovel with
+  var int& gensym;
+  var int x;
+  var int y;
+  var Garden& garden;
+  event void ok;
+do
+  var int id = gensym;
+  gensym = gensym + 1;
+  emit NEW_SPRITE => (id, x, y, SHOVEL, 3);
+  finalize with
+    emit FREE_SPRITE => id;
+  end
+
+  par/or do
+    loop do
+      (x, y) = await MOUSE_MOVE;
+      emit SET_SPRITE_POSITION => (id, x, y, 1);
+    end
+  with
+    loop do
+      par/or do
+        (x, y) = await MOUSE_UP;
+        break;
+      with
+        (x, y) = await MOUSE_DOWN;
+      end
+      do ShovelActive with
+        this.id = id;
+        this.x = &x;
+        this.y = &y;
+        this.garden = &garden;
+      end;
+    end
+  end
+  emit ok;
+end
+
+class Tween with
+  var int target_x;
+  var int target_y;
+  var float& x;
+  var float& y;
+  var int id;
+  var float speed;
+  event void ok;
+do
+  loop do
+    if x == target_x and y == target_y then
+      break;
+    end
+    await UPDATE;
+
+    var float dx = target_x - x;
+    var float dy = target_y - y;
+    var float dist = _sqrt(dx * dx + dy * dy);
+    if dist > speed then
+      x = x + speed * dx / dist;
+      y = y + speed * dy / dist;
+    else
+      x = target_x;
+      y = target_y;
+    end
+
+    if dx < 0 then
+      emit SET_SPRITE_POSITION => (id, (int)x, (int)y, -1);
+    else
+      emit SET_SPRITE_POSITION => (id, (int)x, (int)y, 1);
+    end
+  end
+  emit ok;
+end
+
+class Fly with
+  var int target_x;
+  var int target_y;
+  var float& x;
+  var float& y;
+  var int id;
+  event void ok;
+do
+  var float speed = 4.0 + (_d(6) + _d(6) + _d(6)) * 0.1;
+  var int intermediate_y = ( y + target_y ) / 2 - (_d(50) + 10);
+  var int intermediate_x = ( x + target_x ) / 2;
+  do Tween with
+    this.target_x = intermediate_x;
+    this.target_y = intermediate_y;
+    this.x = &x;
+    this.y = &y;
+    this.id = id;
+    this.speed = speed;
+  end;
+  do Tween with
+    this.target_x = target_x;
+    this.target_y = target_y;
+    this.x = &x;
+    this.y = &y;
+    this.id = id;
+    this.speed = speed;
+  end;
+  emit ok;
+end
+
+class Seed with
+  var int& gensym;
+  var float x;
+  var float y;
+  var int tier;
+do
+  var int id = gensym;
+  gensym = gensym + 1;
+
+  emit NEW_SPRITE => (id, x, y, SEED, 2);
+  if tier == 1 then
+    emit SET_SPRITE_TINT => (id, 0x1C451F);
+  else/if tier == 2 then
+    emit SET_SPRITE_TINT => (id, 0x34291C);
+  else/if tier == 3 then
+    emit SET_SPRITE_TINT => (id, 0x8E9769);
+  end
+
+  finalize with
+    emit FREE_SPRITE => id;
+  end
+
+  var bool touched = false;
+  par/or do
+    do Tween with
+      this.target_x = x;
+      this.target_y = 1000;
+      this.x = &x;
+      this.y = &y;
+      this.id = id;
+      this.speed = 2.0;
+    end;
+  with
+    loop do
+      var int mx, my;
+      (mx, my) = await MOUSE_MOVE;
+      if (mx - x)*(mx - x) + (my - y)*(my - y) < 100 then
+        touched = true;
+        break;
+      end
+    end
+  end
+
+  if touched then
+    do Tween with
+      this.target_x = TOOL_ROW_START + (tier + 2) * TOOL_ROW_SPACING;
+      this.target_y = TOOL_ROW_HEIGHT;
+      this.x = &x;
+      this.y = &y;
+      this.id = id;
+      this.speed = 10.0;
+     end;
+
+     _seeds[tier] = _seeds[tier] + 1;
+     emit SET_COUNT => (tier, _seeds[tier]);
+  end
+end
+
+native do
+  int perch_x[] = { 330, 434, 545, 695, 834, 756 };
+  int perch_y[] = { 200, 160, 150, 100, 109, 211 };
+  int occupied[] = { 0, 0, 0, 0, 0, 0, };
+end
+
+class Birb with
+  var int& gensym;
+  var int& birb_count;
+  pool Seed[]& seeds;
+  var int tier;
+do
+  birb_count = birb_count + 1;
+
+  var int id = gensym;
+  var int perched_id = gensym;
+  gensym = gensym + 2;
+  var float x = _d(1280);
+  var float y = -1 * _d(100);
+  var int texture = tier * 2 + 13;
+  emit NEW_SPRITE => (id, (int)x, (int)y, texture, 2);
+  finalize with
+    emit FREE_SPRITE => id;
+    birb_count = birb_count - 1;
+  end
+
+  par/or do
+    // we want birbs to visit for ~5s
+    // that's 60 * 5 updates at 60fps
+    loop do
+      await UPDATE;
+      if _d(60 * 5) == 0 then
+        break;        
+      end
+    end
+  with
+    loop do
+      var int target_perch = _d(6);
+      do Fly with
+        this.target_x = _perch_x[target_perch];
+        this.target_y = _perch_y[target_perch];
+        this.x = &x;
+        this.y = &y;
+        this.id = id;
+      end;
+      if _occupied[target_perch] then
+        continue;
+      end
+
+      do
+        _occupied[target_perch] = 1;
+        emit FREE_SPRITE => id;
+        emit NEW_SPRITE => (perched_id, (int)x, (int)y, texture+1, 2);
+        finalize with
+          _occupied[target_perch] = 0;
+          emit FREE_SPRITE => perched_id;
+          emit NEW_SPRITE => (id, (int)x, (int)y, texture, 2);
+        end
+
+        do Delay with
+          this.ticks = _d(60) + _d(60) + _d(60);
+        end;
+      end
+    end
+  end
+
+  if _d(10) >= _seeds[tier] then
+    spawn Seed in seeds with
+      this.gensym = &gensym;
+      this.x = x;
+      this.y = y;
+      this.tier = tier;
+    end;
+  end
+
+  do Fly with
+    this.target_x = _d(1280);
+    this.target_y = -1 * _d(100);
+    this.x = &x;
+    this.y = &y;
+    this.id = id;
+  end;
+end
+
+var int birb_count = 0;
+pool Birb[5] birbs;
+pool Seed[5] seeds;
+
+var Garden garden;
+
+par do
+  loop do
+    loop do
+      var int x;
+      var int y;
+      (x, y) = await MOUSE_DOWN;
+      if y > 800 and x > (TOOL_ROW_START + 6*TOOL_ROW_SPACING - TOOL_ROW_HALFWIDTH) and x < (TOOL_ROW_START + 6*TOOL_ROW_SPACING + TOOL_ROW_HALFWIDTH) then
+        break;
+      end
+    end
+    emit SET_MUTED => 1;
+    loop do
+      var int x;
+      var int y;
+      (x, y) = await MOUSE_DOWN;
+      if y > 800 and x > (TOOL_ROW_START + 6*TOOL_ROW_SPACING - TOOL_ROW_HALFWIDTH) and x < (TOOL_ROW_START + 6*TOOL_ROW_SPACING + TOOL_ROW_HALFWIDTH) then
+        break;
+      end
+    end
+    emit SET_MUTED => 0;
+  end
+with
+  loop do
+    var int seed, plot;
+    (seed, plot) = await garden.go_plant;
+    if _plot_occupied[plot] then
+      _printf("cannot plant %d in plot %d\n", seed, plot);
+    else
+      if seed == PHILODENDRON then
+        spawn Philodendron with
+          this.gensym = &gensym;
+          this.garden = &garden;
+          this.plot = plot;
+        end;
+      else/if seed == PITCHER and _seeds[1] > 0 then
+        spawn Pitcher with
+          this.gensym = &gensym;
+          this.garden = &garden;
+          this.plot = plot;
+        end;
+        _seeds[1] = _seeds[1] - 1;
+        emit SET_COUNT => (1, _seeds[1]);
+      else/if seed == ORCHID and _seeds[2] > 0 then
+        spawn Orchid with
+          this.gensym = &gensym;
+          this.garden = &garden;
+          this.plot = plot;
+        end;
+        _seeds[2] = _seeds[2] - 1;
+        emit SET_COUNT => (2, _seeds[2]);
+      else/if seed == HELICONIA and _seeds[3] > 0 then
+        spawn Heliconia with
+          this.gensym = &gensym;
+          this.garden = &garden;
+          this.plot = plot;
+        end;
+        _seeds[3] = _seeds[3] - 1;
+        emit SET_COUNT => (3, _seeds[3]);
+      end
+    end
+  end
+with
+  loop do
+    _printf("top of tool loop\n");
+    par/or do
+      await MOUSE_OUT;
+    with
+      var int x, y;
+      (x, y) = await MOUSE_DOWN;
+      if y >= TOOL_ROW_HEIGHT then
+        if x > (TOOL_ROW_START + 0*TOOL_ROW_SPACING - TOOL_ROW_HALFWIDTH) and x < (TOOL_ROW_START + 0*TOOL_ROW_SPACING + TOOL_ROW_HALFWIDTH) then
+          do Shovel with
+            this.gensym = &gensym;
+            this.x = x;
+            this.y = y;
+            this.garden = &garden;
+          end;
+        else/if x > (TOOL_ROW_START + 1*TOOL_ROW_SPACING - TOOL_ROW_HALFWIDTH) and x < (TOOL_ROW_START + 1*TOOL_ROW_SPACING + TOOL_ROW_HALFWIDTH) then
+          do WateringCan with
+            this.gensym = &gensym;
+            this.x = x;
+            this.y = y;
+            this.garden = &garden;
+          end;
+        else/if x > (TOOL_ROW_START + 2*TOOL_ROW_SPACING - TOOL_ROW_HALFWIDTH) and x < (TOOL_ROW_START + 2*TOOL_ROW_SPACING + TOOL_ROW_HALFWIDTH) then
+          do Bag with
+            this.gensym = &gensym;
+            this.x = x;
+            this.y = y;
+            this.garden = &garden;
+            this.seed = PHILODENDRON;
+          end;
+        else/if x > (TOOL_ROW_START + 3*TOOL_ROW_SPACING - TOOL_ROW_HALFWIDTH) and x < (TOOL_ROW_START + 3*TOOL_ROW_SPACING + TOOL_ROW_HALFWIDTH) then
+          if _seeds[1] > 0 then
+            do Bag with
+              this.gensym = &gensym;
+              this.x = x;
+              this.y = y;
+              this.garden = &garden;
+              this.seed = PITCHER;
+            end;
+          end
+        else/if x > (TOOL_ROW_START + 4*TOOL_ROW_SPACING - TOOL_ROW_HALFWIDTH) and x < (TOOL_ROW_START + 4*TOOL_ROW_SPACING + TOOL_ROW_HALFWIDTH) then
+          if _seeds[2] > 0 then
+            do Bag with
+              this.gensym = &gensym;
+              this.x = x;
+              this.y = y;
+              this.garden = &garden;
+              this.seed = ORCHID;
+            end;
+          end
+        else/if x > (TOOL_ROW_START + 5*TOOL_ROW_SPACING - TOOL_ROW_HALFWIDTH) and x < (TOOL_ROW_START + 5*TOOL_ROW_SPACING + TOOL_ROW_HALFWIDTH) then
+          if _seeds[3] > 0 then
+            do Bag with
+              this.gensym = &gensym;
+              this.x = x;
+              this.y = y;
+              this.garden = &garden;
+              this.seed = HELICONIA;
+            end;
+          end
+        end
+      end
+    end
+  end
+with
+  loop do
+    await UPDATE;
+    if garden.score > birb_count and garden.t0_plants > 0 and _d(60) == 0 then
+      spawn Birb in birbs with
+        this.gensym = &gensym;
+        this.birb_count = &birb_count;
+        this.seeds = &seeds;
+        this.tier = 1;
+      end;
+    end
+  end
+with
+  loop do
+    await UPDATE;
+    if garden.score > birb_count and garden.t1_plants > 0 and _d(60) == 0 then
+      spawn Birb in birbs with
+        this.gensym = &gensym;
+        this.birb_count = &birb_count;
+        this.seeds = &seeds;
+        this.tier = 2;
+      end;
+    end
+  end
+with
+  loop do
+    await UPDATE;
+    if garden.score > birb_count and garden.t2_plants > 0 and _d(60) == 0 then
+      spawn Birb in birbs with
+        this.gensym = &gensym;
+        this.birb_count = &birb_count;
+        this.seeds = &seeds;
+        this.tier = 3;
+      end;
+    end
+  end
+end
+
