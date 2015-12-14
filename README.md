@@ -1,5 +1,4 @@
-# brtaciturn-octo-fibula
-An exercise connecting Ceu to Pixi.js via Emscripten
+# Viva Pájaro
 
+A demo is visible here: http://sugarbyte.site44.com/viva.html
 
-A demo is visible here: http://www.johnicholas.com/brtaciturn-octo-fibula/viper_girl_ish.html
