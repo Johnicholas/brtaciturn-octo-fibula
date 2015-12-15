@@ -1,0 +1,34 @@
+// lst.bt1.leaf
+
+data Leaf with
+    var int v;
+end
+
+class LeafHandler with
+    var Leaf& leaf;
+do
+    escape leaf.v;
+end
+
+#include "btree-1.ceu"
+    /* depends on the "Leaf" data type and the "LeafHandler" class */
+
+pool BTree[] btree = new                      // RESULT     ORDER
+    BTree.SEQUENCE(                           // 7              9
+        BTree.SEQUENCE(                       //  3             7
+            BTree.LEAF(Leaf(1)),              //   1            1
+            BTree.SELECTOR(                   //   2            6
+                BTree.SELECTOR(               //    2           5
+                    BTree.SEQUENCE(           //     0          3
+                        BTree.LEAF(Leaf(0)),  //      0         2
+                        BTree.LEAF(Leaf(2))), //      -         -
+                    BTree.LEAF(Leaf(2))),     //     2          4
+                BTree.LEAF(Leaf(0)))),        //    -           -
+        BTree.LEAF(Leaf(4)));                 //  4             8
+
+var int ok =
+    do BTreeTraverse with
+        this.btree = btree;
+    end;
+
+escape ok;
