@@ -1,4 +1,4 @@
-viva_sdl: viva_sdl.c compile _ceu_app.c libSDL.la
+viva_sdl: viva_sdl.c compile _ceu_app.c
 	bash compile viva_sdl viva_sdl.c
 
 _ceu_app.c: garden.ceu
