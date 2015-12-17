@@ -1,26 +1,8 @@
 #include <assert.h>
 #include <math.h>
-#include "table.h"
-#include "SDL.h"
+#include <SDL/SDL.h>
 #include <stdio.h>
-
-int cmpint(const void *x, const void *y) {
-  if (**(int **)x < **(int **)y) {
-    return -1;
-  } else if (**(int **)x > **(int **)y) {
-    return +1;
-  } else {
-    return 0;
-  }
-}
-
-int intcmp(const void *x, const void *y) {
-	return cmpint(&x, &y);
-}
-
-unsigned inthash(const void *x) {
-	return *(int *)x;
-}
+#include <stdlib.h>
 
 int d(int max) {
   return rand()%max;
@@ -29,8 +11,6 @@ int d(int max) {
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 900
 
-static void* sprites;
-
 struct Sprite {
   int key;
   int x;
@@ -38,8 +18,10 @@ struct Sprite {
   int which;
   int color;
   // TODO: int layer;
+  struct Sprite* next;
 };
 
+static struct Sprite* sprites;
 
 void new_sprite(int key, int x, int y, int which, int layer) {
   printf("new sprite: %d %d %d %d %d\n", key, x, y, which, layer);
@@ -50,21 +32,61 @@ void new_sprite(int key, int x, int y, int which, int layer) {
   new_sprite->which = which;
   new_sprite->color = 0xffffff;
   // TODO: layer
-  Table_put(sprites, &(new_sprite->key), new_sprite);
+  new_sprite->next = sprites;
+  sprites = new_sprite;
 }
 
 void set_sprite_position(int key, int x, int y, int flipped) {
-  struct Sprite* it = Table_get(sprites, &key);
-  it->x = x;
-  it->y = y;
-  // TODO: flipped
+  struct Sprite* it;
+  for (it = sprites; it; it = it->next) {
+    if (it->key == key) {
+      it->x = x;
+      it->y = y;
+      // TODO: flipped
+      return;
+    }
+  }
 }
-//extern void set_sprite_tint(int key, int fraction);
-//extern void set_sprite_rotation(int key, float rotation);
+
+void set_sprite_tint(int key, int color) {
+  struct Sprite* it;
+  for (it = sprites; it; it = it->next) {
+    if (it->key == key) {
+      it->color = color;
+      return;
+    }
+  }
+}
+
+void set_sprite_rotation(int key, float rotation) {
+  // TODO
+}
 
 void free_sprite(int key) {
-  printf("free sprite: %d\n", key);
-  free(Table_remove(sprites, &key));
+  struct Sprite** it = &sprites;
+  while (1) {
+    if (*it == NULL) {
+      return;
+    } else if ((*it)->key == key) {
+      struct Sprite* temp = (*it)->next;
+      free(*it);
+      *it = temp;
+      return;
+    }
+    it = &((*it)->next);
+  }
+  /*
+  for (it = sprites; it; prev = it, it = it->next) {
+    if (it->key == key) {
+      if (prev) {
+        prev->next = it->next;
+      } else {
+        sprites = it->next;
+      }
+      free(it);
+    }
+  }
+  */
 }
 
 void set_count(int which, int new_value) {
@@ -86,8 +108,8 @@ void set_muted(int new_muted) {
 // These three lines are part of the "Ceu invokes C" bindings.
 #define ceu_out_emit_NEW_SPRITE(X) new_sprite(X->_1, X->_2, X->_3, X->_4, X->_5)
 #define ceu_out_emit_SET_SPRITE_POSITION(X) set_sprite_position(X->_1, X->_2, X->_3, X->_4)
-#define ceu_out_emit_SET_SPRITE_TINT(X) //set_sprite_tint(X->_1, X->_2)
-#define ceu_out_emit_SET_SPRITE_ROTATION(X) //set_sprite_rotation(X->_1, X->_2)
+#define ceu_out_emit_SET_SPRITE_TINT(X) set_sprite_tint(X->_1, X->_2)
+#define ceu_out_emit_SET_SPRITE_ROTATION(X) set_sprite_rotation(X->_1, X->_2)
 #define ceu_out_emit_FREE_SPRITE(X) free_sprite(X->_1)
 #define ceu_out_emit_SET_COUNT(X) set_count(X->_1, X->_2)
 #define ceu_out_emit_PRINT_DEBUG(X) print_debug(X->_1)
@@ -123,36 +145,23 @@ extern void ceu_app_init (tceu_app* app);
 byte CEU_DATA[sizeof(CEU_Main)];
 tceu_app app;
 
-#include <stdlib.h>
-#include <math.h>
-#include "SDL.h"
-
-#define TRUE 1
-
 SDL_Surface *screen;
-int running = TRUE;
-
-// static SDL_Surface* bg;
-
-void draw_sprite(const void* key, void** valueptr, void* cl) {
-  struct Sprite* to_draw = *valueptr;
-  struct SDL_Rect rect;
-  rect.x = to_draw->x;
-  rect.y = to_draw->y;
-  rect.w = 10;
-  rect.h = 10;
-  SDL_FillRect(screen, &rect, to_draw->color);
-}
 
 void render() {
+  struct Sprite* it;
   struct SDL_Rect rect;
   rect.x = 0;
   rect.y = 0;
   rect.w = SCREEN_WIDTH;
   rect.h = SCREEN_HEIGHT;
   SDL_FillRect(screen, &rect, 0x999999);
-
-  Table_map(sprites, draw_sprite, NULL);
+  for (it = sprites; it; it = it->next) {
+    rect.x = it->x;
+    rect.y = it->y;
+    rect.w = 10;
+    rect.h = 10;
+    SDL_FillRect(screen, &rect, it->color);
+  }
 }
 
 
@@ -179,13 +188,9 @@ void mainloop() {
 
 // Entry point
 int main(int argc, char *argv[]) {
-  sprites = Table_new(20, intcmp, inthash);
-
   app.data = (tceu_org*) &CEU_DATA;
   app.init = &ceu_app_init;
   app.init(&app);
-
-  // bg = IMG_Load("bg.png");
 
   SDL_Init(SDL_INIT_VIDEO);
   atexit(SDL_Quit);

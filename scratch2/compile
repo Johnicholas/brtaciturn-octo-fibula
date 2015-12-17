@@ -1,4 +1,4 @@
-gcc -o $1 $2 -lm -Werror -lSDL libcii.a
+gcc -o $1 $2 -lm -Werror -lSDL
 
 
 
