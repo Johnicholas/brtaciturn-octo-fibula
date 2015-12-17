@@ -4,12 +4,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define countof(X) (sizeof(X) / sizeof(X[0]))
+
 int d(int max) {
   return rand()%max;
 }
 
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 900
+#define TOOL_ROW_START 215
+#define TOOL_ROW_SPACING 135
+#define TOOL_ROW_HEIGHT 850
 
 struct Sprite {
   int key;
@@ -75,18 +80,6 @@ void free_sprite(int key) {
     }
     it = &((*it)->next);
   }
-  /*
-  for (it = sprites; it; prev = it, it = it->next) {
-    if (it->key == key) {
-      if (prev) {
-        prev->next = it->next;
-      } else {
-        sprites = it->next;
-      }
-      free(it);
-    }
-  }
-  */
 }
 
 void set_count(int which, int new_value) {
@@ -147,20 +140,38 @@ tceu_app app;
 
 SDL_Surface *screen;
 
+int corners_x[] = { 258, 512, 778, 1030, 111, 461, 828, 1175 };
+int corners_y[] = { 485, 485, 485, 485, 800, 800, 800, 800 };
+
+void draw_spot(int x, int y, int color) {
+  static struct SDL_Rect rect;
+  rect.x = x - 5;
+  rect.y = y - 5;
+  rect.w = 10;
+  rect.h = 10;
+  SDL_FillRect(screen, &rect, color);
+}
+
 void render() {
   struct Sprite* it;
   struct SDL_Rect rect;
+  int i;
+
   rect.x = 0;
   rect.y = 0;
   rect.w = SCREEN_WIDTH;
   rect.h = SCREEN_HEIGHT;
   SDL_FillRect(screen, &rect, 0x999999);
+  // Draw a trapezoid grid thingy?
+  for (i = 0; i < countof(corners_x); i++ ) {
+    draw_spot(corners_x[i], corners_y[i], 0x000000);
+  }
+  for (i = 0; i < 6; i++) {
+    draw_spot(TOOL_ROW_START + TOOL_ROW_SPACING * (i + 0.5), TOOL_ROW_HEIGHT, 0x000000);
+  }
+  // Draw the sprites
   for (it = sprites; it; it = it->next) {
-    rect.x = it->x;
-    rect.y = it->y;
-    rect.w = 10;
-    rect.h = 10;
-    SDL_FillRect(screen, &rect, it->color);
+    draw_spot(it->x, it->y, it->color);
   }
 }
 
@@ -176,8 +187,24 @@ void mainloop() {
   while (SDL_PollEvent(&event)) {
     switch (event.type) {
     case SDL_QUIT: exit(0); break;
-    case SDL_MOUSEBUTTONDOWN: /* TODO */ break;
-    case SDL_MOUSEBUTTONUP: /* TODO */ break;
+    case SDL_MOUSEBUTTONDOWN:
+      {
+        tceu__int__int payload = { event.button.x, event.button.y };
+        ceu_sys_go(&app, CEU_IN_MOUSE_DOWN, &payload);
+      }
+      break;
+    case SDL_MOUSEBUTTONUP:
+      {
+        tceu__int__int payload = { event.button.x, event.button.y };
+        ceu_sys_go(&app, CEU_IN_MOUSE_UP, &payload);
+      }
+      break;
+    case SDL_MOUSEMOTION: 
+      {
+        tceu__int__int payload = { event.motion.x, event.motion.y };
+        ceu_sys_go(&app, CEU_IN_MOUSE_MOVE, &payload);
+      }
+      break;
     }
   }
 
@@ -195,7 +222,7 @@ int main(int argc, char *argv[]) {
   SDL_Init(SDL_INIT_VIDEO);
   atexit(SDL_Quit);
   screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, 32, SDL_SWSURFACE);  
-  if ( screen == NULL ) {
+  if (screen == NULL) {
     exit(1);
   }
   while (1) {
