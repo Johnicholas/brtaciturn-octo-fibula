@@ -2,7 +2,7 @@
 
 A demo is visible here: http://sugarbyte.site44.com/viva.html
 
-# A bit of explanation
+## A bit of explanation
 
 garden.ceu contains essential game logic, and the ceu compiler compiles it into _ceu_app.c.
 
